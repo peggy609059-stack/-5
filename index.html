@@ -1,366 +1,451 @@
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智慧日照中心 - 實境模擬參訪系統</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css"/>
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
-    <style>
-        body { margin: 0; font-family: "Microsoft JhengHei", sans-serif; overflow: hidden; background: #000; }
-        #panorama { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; }
+ /* 平面圖片檢視器容器樣式（支援左右滑動或排版） */
+    #flat-view-container {
+        position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+        background: rgba(0, 0, 0, 0.9); z-index: 20; display: none;
+        justify-content: center; align-items: center; flex-direction: column;
+        padding: 20px; box-sizing: border-box;
+    }
+    
+    .flat-content-wrapper {
+        display: flex;
+        max-width: 90vw;
+        max-height: 80vh;
+        background: rgba(30, 30, 30, 0.95);
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 15px 40px rgba(0,0,0,0.8);
+        border: 2px solid rgba(255,255,255,0.2);
+    }
 
-        /* 平面圖片檢視器容器樣式 */
-        #flat-view-container {
-            position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: rgba(0, 0, 0, 0.9); z-index: 20; display: none;
-            justify-content: center; align-items: center; flex-direction: column;
-        }
-        #flat-view-container img {
-            max-width: 85vw; max-height: 75vh; border-radius: 8px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.8); object-fit: contain;
-            border: 2px solid rgba(255,255,255,0.2);
-        }
-        .return-btn {
-            position: absolute; top: 20px; right: 20px; z-index: 25;
-            background: #ff4d4d; color: white; border: none; padding: 10px 20px;
-            font-size: 1.1rem; border-radius: 6px; cursor: pointer; font-weight: bold;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.4); transition: background 0.2s;
-        }
-        .return-btn:hover { background: #cc0000; }
+    .flat-img-box {
+        flex: 1.2;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: #111;
+        padding: 15px;
+    }
 
-        #title-overlay {
-            position: absolute; top: 20px; left: 20px; z-index: 10;
-            background: rgba(0, 0, 0, 0.75); color: white; padding: 15px 20px; border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            max-width: 320px;
-            transition: all 0.3s ease;
-        }
-        #title-overlay h2 { margin: 0 0 5px 0; font-size: 1.4rem; }
-        #title-overlay p { margin: 0 0 10px 0; font-size: 1rem; color: #ccc; }
+    #flat-image {
+        max-width: 100%; max-height: 70vh; border-radius: 6px;
+        object-fit: contain;
+    }
 
-        /* 標題提示框收合樣式 */
-        #title-overlay.collapsed {
-            padding: 10px 18px;
-            cursor: pointer;
-            background: rgba(0, 0, 0, 0.85);
-        }
-        #title-overlay.collapsed h2,
-        #title-overlay.collapsed p,
-        #title-overlay.collapsed .toggle-btn {
-            display: none;
-        }
+    .flat-info-box {
+        flex: 1;
+        padding: 30px;
+        color: #fff;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
 
-        .toggle-btn {
-            background: rgba(255, 255, 255, 0.25); 
-            border: 1px solid rgba(255, 255, 255, 0.5); 
-            color: #fff; 
-            font-size: 0.95rem; 
-            padding: 6px 14px; 
-            border-radius: 6px;
-            cursor: pointer; 
-            float: right; 
-            font-weight: bold;
-        }
-        .toggle-btn:hover { 
-            background: rgba(255, 255, 255, 0.45); 
-        }
+    .flat-info-box h2 {
+        margin-top: 0;
+        font-size: 1.8rem;
+        color: #4da6ff;
+        border-bottom: 2px solid rgba(255,255,255,0.1);
+        padding-bottom: 10px;
+    }
 
-        #title-overlay.collapsed::after {
-            content: "💡 展開參訪提示";
-            font-size: 1rem;
-            color: #fff;
-            font-weight: bold;
-        }
+    .flat-info-box p {
+        font-size: 1.1rem;
+        line-height: 1.8;
+        color: #ddd;
+        margin-bottom: 20px;
+    }
 
-        /* 空間介紹彈跳視窗樣式 */
-        #info-modal {
-            position: absolute; bottom: 20px; left: 20px; z-index: 10;
-            background: rgba(255, 255, 255, 0.95); color: #333; padding: 15px 20px; border-radius: 8px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.4); max-width: 320px; display: none;
-            border-left: 5px solid #007bff;
-        }
-        #info-modal h3 { margin: 0 0 8px 0; font-size: 1.3rem; color: #007bff; }
-        #info-modal p { margin: 0; font-size: 1rem; line-height: 1.6; color: #555; }
+    .flat-features {
+        background: rgba(255, 255, 255, 0.05);
+        padding: 15px;
+        border-radius: 8px;
+        border-left: 4px solid #4da6ff;
+    }
 
-        #info-modal .close-btn {
-            background: rgba(0, 123, 255, 0.15); 
-            border: 1px solid rgba(0, 123, 255, 0.3); 
-            color: #007bff; 
-            font-size: 0.95rem; 
-            padding: 5px 12px; 
-            border-radius: 6px;
-            cursor: pointer; 
-            float: right;
-            font-weight: bold;
-        }
-        #info-modal .close-btn:hover { 
-            background: rgba(0, 123, 255, 0.3); 
-            color: #0056b3; 
-        }
+    .flat-features h4 {
+        margin: 0 0 8px 0;
+        color: #ffcc00;
+        font-size: 1.1rem;
+    }
 
-        #info-toggle-btn {
-            position: absolute; bottom: 20px; left: 20px; z-index: 10;
-            background: rgba(0, 123, 255, 0.9); color: white; 
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            padding: 10px 18px; border-radius: 8px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
-            font-size: 1rem; font-weight: bold; cursor: pointer;
-            display: none;
-        }
-        #info-toggle-btn:hover {
-            background: rgba(0, 123, 255, 1);
-        }
-    </style>
-</head>
-<body>
+    .flat-features ul {
+        margin: 0;
+        padding-left: 20px;
+        color: #ccc;
+        font-size: 0.95rem;
+        line-height: 1.6;
+    }
 
-    <div id="title-overlay" onclick="checkToggle(event)">
-        <button class="toggle-btn" onclick="toggleOverlay(event)">✖ 關閉提示</button>
-        <h2>蘆洲集賢社區長照機構線上參訪</h2>
-        <p>💡提示：點擊畫面中的場景按鈕(↑)可自由穿梭各個區域</p>
+    .return-btn {
+        position: absolute; top: 20px; right: 20px; z-index: 25;
+        background: #ff4d4d; color: white; border: none; padding: 10px 20px;
+        font-size: 1.1rem; border-radius: 6px; cursor: pointer; font-weight: bold;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.4); transition: background 0.2s;
+    }
+    .return-btn:hover { background: #cc0000; }
+
+    #title-overlay {
+        position: absolute; top: 20px; left: 20px; z-index: 10;
+        background: rgba(0, 0, 0, 0.75); color: white; padding: 15px 20px; border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        max-width: 320px;
+        transition: all 0.3s ease;
+    }
+    #title-overlay h2 { margin: 0 0 5px 0; font-size: 1.4rem; }
+    #title-overlay p { margin: 0 0 10px 0; font-size: 1rem; color: #ccc; }
+
+    /* 標題提示框收合樣式 */
+    #title-overlay.collapsed {
+        padding: 10px 18px;
+        cursor: pointer;
+        background: rgba(0, 0, 0, 0.85);
+    }
+    #title-overlay.collapsed h2,
+    #title-overlay.collapsed p,
+    #title-overlay.collapsed .toggle-btn {
+        display: none;
+    }
+
+    .toggle-btn {
+        background: rgba(255, 255, 255, 0.25); 
+        border: 1px solid rgba(255, 255, 255, 0.5); 
+        color: #fff; 
+        font-size: 0.95rem; 
+        padding: 6px 14px; 
+        border-radius: 6px;
+        cursor: pointer; 
+        float: right; 
+        font-weight: bold;
+    }
+    .toggle-btn:hover { 
+        background: rgba(255, 255, 255, 0.45); 
+    }
+
+    #title-overlay.collapsed::after {
+        content: "💡 展開參訪提示";
+        font-size: 1rem;
+        color: #fff;
+        font-weight: bold;
+    }
+
+    /* 空間介紹彈跳視窗樣式 */
+    #info-modal {
+        position: absolute; bottom: 20px; left: 20px; z-index: 10;
+        background: rgba(255, 255, 255, 0.95); color: #333; padding: 15px 20px; border-radius: 8px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.4); max-width: 320px; display: none;
+        border-left: 5px solid #007bff;
+    }
+    #info-modal h3 { margin: 0 0 8px 0; font-size: 1.3rem; color: #007bff; }
+    #info-modal p { margin: 0; font-size: 1rem; line-height: 1.6; color: #555; }
+
+    #info-modal .close-btn {
+        background: rgba(0, 123, 255, 0.15); 
+        border: 1px solid rgba(0, 123, 255, 0.3); 
+        color: #007bff; 
+        font-size: 0.95rem; 
+        padding: 5px 12px; 
+        border-radius: 6px;
+        cursor: pointer; 
+        float: right;
+        font-weight: bold;
+    }
+    #info-modal .close-btn:hover { 
+        background: rgba(0, 123, 255, 0.3); 
+        color: #0056b3; 
+    }
+
+    #info-toggle-btn {
+        position: absolute; bottom: 20px; left: 20px; z-index: 10;
+        background: rgba(0, 123, 255, 0.9); color: white; 
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        padding: 10px 18px; border-radius: 8px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+        font-size: 1rem; font-weight: bold; cursor: pointer;
+        display: none;
+    }
+    #info-toggle-btn:hover {
+        background: rgba(0, 123, 255, 1);
+    }
+</style>
+
+
+<div id="title-overlay" onclick="checkToggle(event)">
+    <button class="toggle-btn" onclick="toggleOverlay(event)">✖ 關閉提示</button>
+    <h2>蘆洲集賢社區長照機構線上參訪</h2>
+    <p>💡提示：點擊畫面中的場景按鈕(↑)可自由穿梭各個區域</p>
+</div>
+
+<!-- 空間介紹彈跳視窗 -->
+<div id="info-modal">
+    <button class="close-btn" onclick="toggleInfoModal()">✖ 關閉介紹</button>
+    <h3 id="modal-title">區域名稱</h3>
+    <p id="modal-desc">區域介紹內容...</p>
+</div>
+
+<!-- 重新打開空間介紹的按鈕 -->
+<button id="info-toggle-btn" onclick="toggleInfoModal()">ℹ️ 展開空間介紹</button>
+
+<div id="panorama"></div>
+
+<!-- 平面照片檢視容器 (含詳細介紹面板) -->
+<div id="flat-view-container">
+    <button class="return-btn" onclick="closeFlatView()">返回上課區</button>
+    <div class="flat-content-wrapper">
+        <div class="flat-img-box">
+            <img id="flat-image" src="廚房.jpg" alt="廚房區平面圖" onerror="this.src='https://placehold.co/800x600/333/fff?text=Kitchen+Flat+Image'">
+        </div>
+        <div class="flat-info-box">
+            <h2 id="flat-title">廚房區｜餐食與安全照護</h2>
+            <p id="flat-desc">負責準備長輩的午餐與點心，並依照長輩的咀嚼能力與飲食需求準備餐食。廚房區與教室區具有良好的視線連結，工作人員準備餐食時，也能同時留意教室區長輩的活動與安全。</p>
+            <div class="flat-features">
+                <h4>🌟 空間亮點與特色</h4>
+                <ul id="flat-features-list">
+                    <li><strong>個別化飲食調整：</strong> 依據長輩牙口狀況提供一般餐、軟食、碎食或泥餐。</li>
+                    <li><strong>安全視線設計：</strong> 開放式或半開放式視線通透，確保照護零死角。</li>
+                    <li><strong>衛生安全管理：</strong> 嚴格遵循食品安全衛生規範，讓家屬安心。</li>
+                </ul>
+            </div>
+        </div>
     </div>
+</div>
 
-    <!-- 空間介紹彈跳視窗 -->
-    <div id="info-modal">
-        <button class="close-btn" onclick="toggleInfoModal()">✖ 關閉介紹</button>
-        <h3 id="modal-title">區域名稱</h3>
-        <p id="modal-desc">區域介紹內容...</p>
-    </div>
+<script>
+    // 各區域的詳細介紹資料
+    const sceneInfo = {
+        "counter": {
+            "title": "櫃檯｜長輩接送區",
+            "desc": "提供家屬及交通車接送長輩的交接空間，方便長輩每日安全進出中心。"
+        },
+        "shoes": {
+            "title": "鞋櫃區｜培養生活自主性",
+            "desc": "讓長輩自己練習穿脫鞋子，維持原有生活習慣，營造像回家一樣的生活感。"
+        },
+        "locker": {
+            "title": "置物櫃｜一人一櫃",
+            "desc": "每位長輩都有自己的專屬置物櫃，可放置個人物品，保有自己的小空間。"
+        },
+        "safe_home": {
+            "title": "平安家（日照生活室）",
+            "desc": "提供午休與日常休息空間，設有固定座位。"
+        },
+        "happy": {
+            "title": "快樂家（日照生活室）",
+            "desc": "兼具休息區與小教室功能，有幾位長輩的專屬座位與活動區域。"
+        },
+        "accessible_toilet": {
+            "title": "無障礙廁所",
+            "desc": "適合輪椅、助行器或下肢較無力的長輩使用。設有求救鈴。"
+        },
+        "toilet1": {
+            "title": "性別友善廁所",
+            "desc": "設有三個小便斗、三間廁所及衛生紙取用區，外側左方設有洗手台。每間皆設有求救鈴。"
+        },
+        "toilet2": {
+            "title": "性別友善廁所與無障礙廁所",
+            "desc": "設有三間廁所及衛生紙取用區，外側左右兩邊皆有洗手台。無障礙廁所適合輪椅、助行器或下肢較無力的長輩使用。每間皆設有求救鈴。"
+        },
+        "Attend class": {
+            "title": "教室區｜活動、運動與用餐",
+            "desc": "提供長輩進行運動、手作、唱歌等團體活動，也是午餐及點心的主要使用空間，增加長輩彼此交流的機會。"
+        },
+        "Perfect": {
+            "title": "圓滿家（日照生活室）",
+            "desc": "提供午休與休息使用，同樣設有固定座位。"
+        },
+        "kitchen": {
+            "title": "廚房區｜依需求準備餐食",
+            "desc": "負責準備長輩的午餐與點心，並依照長輩的咀嚼能力與飲食需求準備餐食。廚房區與教室區具有良好的視線連結，工作人員準備餐食時，也能同時留意教室區長輩的活動與安全。",
+            "features": [
+                "<strong>個別化飲食調整：</strong> 依據長輩牙口狀況提供一般餐、軟食、碎食或泥餐。",
+                "<strong>安全視線設計：</strong> 開放式或半開放式視線通透，確保照護零死角。",
+                "<strong>衛生安全管理：</strong> 嚴格遵循食品安全衛生規範，讓家屬安心。"
+            ]
+        },
+        "escape": {
+            "title": "逃生區｜安全與便利",
+            "desc": "逃生區附近設有洗手台，方便坐附近的長輩使用。逃生門通往警察局，方便緊急狀況使用。"
+        },
+        "activity": {
+            "title": "活動區｜休息與交流",
+            "desc": "設有沙發椅，提供午休及活動空檔休息使用，並有固定座位，讓長輩擁有熟悉的位置。"
+        }
+    };
 
-    <!-- 重新打開空間介紹的按鈕 -->
-    <button id="info-toggle-btn" onclick="toggleInfoModal()">ℹ️ 展開空間介紹</button>
-
-    <div id="panorama"></div>
-
-    <!-- 平面照片檢視容器 (廚房區) -->
-    <div id="flat-view-container">
-        <button class="return-btn" onclick="closeFlatView()">返回上課區</button>
-        <img id="flat-image" src="廚房.jpg" alt="廚房區平面圖" onerror="this.src='https://placehold.co/800x600/333/fff?text=Kitchen+Flat+Image'">
-    </div>
-
-    <script>
-        // 各區域的詳細介紹資料
-        const sceneInfo = {
+    const viewer = pannellum.viewer('panorama', {
+        "default": {
+            "firstScene": "counter",
+            "autoLoad": true,
+            "compass": true
+        },
+        "scenes": {
             "counter": {
-                "title": "櫃檯｜長輩接送區",
-                "desc": "提供家屬及交通車接送長輩的交接空間，方便長輩每日安全進出中心。"
+                "title": "櫃台", "type": "equirectangular", "panorama": "櫃台.jpg",
+                "hotSpots": [{ "pitch": 0, "yaw": 120, "type": "scene", "text": "前往：鞋櫃", "sceneId": "shoes" }]
             },
             "shoes": {
-                "title": "鞋櫃區｜培養生活自主性",
-                "desc": "讓長輩自己練習穿脫鞋子，維持原有生活習慣，營造像回家一樣的生活感。"
+                "title": "鞋櫃", "type": "equirectangular", "panorama": "鞋櫃.jpg",
+                "hotSpots": [
+                    { "pitch": 0, "yaw": 140, "type": "scene", "text": "返回：櫃台", "sceneId": "counter" },
+                    { "pitch": 0, "yaw": 0, "type": "scene", "text": "前往：置物櫃", "sceneId": "locker" }
+                ]
             },
             "locker": {
-                "title": "置物櫃｜一人一櫃",
-                "desc": "每位長輩都有自己的專屬置物櫃，可放置個人物品，保有自己的小空間。"
+                "title": "置物櫃", "type": "equirectangular", "panorama": "櫃子.jpg",
+                "hotSpots": [
+                    { "pitch": 0, "yaw": 50, "type": "scene", "text": "返回：鞋櫃", "sceneId": "shoes" },
+                    { "pitch": 0, "yaw": -90, "type": "scene", "text": "前往：活動區", "sceneId": "activity" },
+                    { "pitch": 0, "yaw": 170, "type": "scene", "text": "前往：走廊", "sceneId": "corridor" }
+                ]
+            },
+            "corridor": {
+                "title": "走廊", "type": "equirectangular", "panorama": "走廊.jpg",
+                "hotSpots": [
+                    { "pitch": 0, "yaw": 150, "type": "scene", "text": "返回：置物櫃", "sceneId": "locker" },
+                    { "pitch": 0, "yaw": 35, "type": "scene", "text": "前往：平安家", "sceneId": "safe_home" },
+                     { "pitch": 0, "yaw": 3, "type": "scene", "text": "前往：快樂家", "sceneId": "happy" },
+                    { "pitch": 0, "yaw": -50, "type": "scene", "text": "前往：中段", "sceneId": "middle" },
+                    { "pitch": 0, "yaw": -130, "type": "scene", "text": "前往：無障礙廁所", "sceneId": "accessible_toilet" }
+                ]
+            },
+            "middle": {
+                "title": "走廊2", "type": "equirectangular", "panorama": "中段.jpg",
+                "hotSpots": [
+                    { "pitch": 0, "yaw": 155, "type": "scene", "text": "前往：走廊", "sceneId": "corridor" },
+                    { "pitch": 0, "yaw": -20, "type": "scene", "text": "前往：上課區", "sceneId": "Attend class" },
+                    { "pitch": 0, "yaw": 100, "type": "scene", "text": "前往：快樂家", "sceneId": "happy" },
+                    { "pitch": 0, "yaw": -130, "type": "scene", "text": "前往：性別友善廁所與無障礙廁所", "sceneId": "toilet2" },
+                    { "pitch": 0, "yaw": -85, "type": "scene", "text": "前往：性別友善廁所", "sceneId": "toilet1" }
+                ]
             },
             "safe_home": {
-                "title": "平安家（日照生活室）",
-                "desc": "提供午休與日常休息空間，設有固定座位。"
+                "title": "平安家", "type": "equirectangular", "panorama": "平安家.jpg",
+                "hotSpots": [{ "pitch": 0, "yaw": 180, "type": "scene", "text": "返回：走廊", "sceneId": "corridor" }]
             },
             "happy": {
-                "title": "快樂家（日照生活室）",
-                "desc": "兼具休息區與小教室功能，有幾位長輩的專屬座位與活動區域。"
+                "title": "快樂家", "type": "equirectangular", "panorama": "快樂家.jpg",
+                "hotSpots": [{ "pitch": 0, "yaw": 170, "type": "scene", "text": "返回：走廊2", "sceneId": "middle" }]
             },
             "accessible_toilet": {
-                "title": "無障礙廁所",
-                "desc": "適合輪椅、助行器或下肢較無力的長輩使用。設有求救鈴。"
-            },
-            "toilet1": {
-                "title": "性別友善廁所",
-                "desc": "設有三個小便斗、三間廁所及衛生紙取用區，外側左方設有洗手台。每間皆設有求救鈴。"
+                "title": "無障礙廁所", "type": "equirectangular", "panorama": "廁所4.jpg",
+                "hotSpots": [{ "pitch": 0, "yaw": 90, "type": "scene", "text": "返回：走廊", "sceneId": "corridor" }]
             },
             "toilet2": {
-                "title": "性別友善廁所與無障礙廁所",
-                "desc": "設有三間廁所及衛生紙取用區，外側左右兩邊皆有洗手台。無障礙廁所適合輪椅、助行器或下肢較無力的長輩使用。每間皆設有求救鈴。"
+                "title": "性別友善廁所與無障礙廁所", "type": "equirectangular", "panorama": "廁所2.jpg",
+                "hotSpots": [{ "pitch": 0, "yaw": 70, "type": "scene", "text": "返回：走廊2", "sceneId": "middle" }]
             },
-            "Attend class": {
-                "title": "教室區｜活動、運動與用餐",
-                "desc": "提供長輩進行運動、手作、唱歌等團體活動，也是午餐及點心的主要使用空間，增加長輩彼此交流的機會。"
+            "toilet1": {
+                "title": "性別友善廁所", "type": "equirectangular", "panorama": "廁所1.jpg",
+                "hotSpots": [{ "pitch": 0, "yaw": 80, "type": "scene", "text": "返回：走廊2", "sceneId": "middle" }]
             },
             "Perfect": {
-                "title": "圓滿家（日照生活室）",
-                "desc": "提供午休與休息使用，同樣設有固定座位。"
+                "title": "圓滿家", "type": "equirectangular", "panorama": "圓滿家.jpg",
+                "hotSpots": [{ "pitch": 0, "yaw": -110, "type": "scene", "text": "返回：上課區", "sceneId": "Attend class" }]
             },
-            "kitchen": {
-                "title": "廚房區｜依需求準備餐食",
-                "desc": "負責準備長輩的午餐與點心，並依照長輩的咀嚼能力與飲食需求準備餐食。廚房區與教室區具有良好的視線連結，工作人員準備餐食時，也能同時留意教室區長輩的活動與安全。"
-            },
-            "escape": {
-                "title": "逃生區｜安全與便利",
-                "desc": "逃生區附近設有洗手台，方便坐附近的長輩使用。逃生門通往警察局，方便緊急狀況使用。"
+            "Attend class": {
+                "title": "上課區", "type": "equirectangular", "panorama": "上課區.jpg",
+                "hotSpots": [
+                    { "pitch": 0, "yaw": -135, "type": "scene", "text": "前往：性別友善廁所與無障礙廁所", "sceneId": "toilet2" },
+                    { "pitch": 0, "yaw": -160, "type": "scene", "text": "返回：走廊2", "sceneId": "middle" },
+                    { "pitch": 0, "yaw": 119, "type": "scene", "text": "前往：圓滿家", "sceneId": "Perfect" },
+                    { "pitch": 0, "yaw": -115, "type": "scene", "text": "前往：性別友善廁所", "sceneId": "toilet1" },
+                    // 保留點擊開啟廚房平面圖的互動點
+                    { "pitch": -5, "yaw": -45, "type": "info", "text": "檢視：廚房區平面圖與詳細介紹", "clickHandlerFunc": openKitchenFlatView }
+                ]
             },
             "activity": {
-                "title": "活動區｜休息與交流",
-                "desc": "設有沙發椅，提供午休及活動空檔休息使用，並有固定座位，讓長輩擁有熟悉的位置。"
+                "title": "活動區", "type": "equirectangular", "panorama": "活動區.jpg",
+                "hotSpots": [{ "pitch": 0, "yaw": -170, "type": "scene", "text": "返回：置物櫃", "sceneId": "locker" }]
             }
-        };
+        }
+    });
 
-        const viewer = pannellum.viewer('panorama', {
-            "default": {
-                "firstScene": "counter",
-                "autoLoad": true,
-                "compass": true
-            },
-            "scenes": {
-                "counter": {
-                    "title": "櫃台", "type": "equirectangular", "panorama": "櫃台.jpg",
-                    "hotSpots": [{ "pitch": 0, "yaw": 120, "type": "scene", "text": "前往：鞋櫃", "sceneId": "shoes" }]
-                },
-                "shoes": {
-                    "title": "鞋櫃", "type": "equirectangular", "panorama": "鞋櫃.jpg",
-                    "hotSpots": [
-                        { "pitch": 0, "yaw": 140, "type": "scene", "text": "返回：櫃台", "sceneId": "counter" },
-                        { "pitch": 0, "yaw": 0, "type": "scene", "text": "前往：置物櫃", "sceneId": "locker" }
-                    ]
-                },
-                "locker": {
-                    "title": "置物櫃", "type": "equirectangular", "panorama": "櫃子.jpg",
-                    "hotSpots": [
-                        { "pitch": 0, "yaw": 50, "type": "scene", "text": "返回：鞋櫃", "sceneId": "shoes" },
-                        { "pitch": 0, "yaw": -90, "type": "scene", "text": "前往：活動區", "sceneId": "activity" },
-                        { "pitch": 0, "yaw": 170, "type": "scene", "text": "前往：走廊", "sceneId": "corridor" }
-                    ]
-                },
-                "corridor": {
-                    "title": "走廊", "type": "equirectangular", "panorama": "走廊.jpg",
-                    "hotSpots": [
-                        { "pitch": 0, "yaw": 150, "type": "scene", "text": "返回：置物櫃", "sceneId": "locker" },
-                        { "pitch": 0, "yaw": 35, "type": "scene", "text": "前往：平安家", "sceneId": "safe_home" },
-                         { "pitch": 0, "yaw": 3, "type": "scene", "text": "前往：快樂家", "sceneId": "happy" },
-                        { "pitch": 0, "yaw": -50, "type": "scene", "text": "前往：中段", "sceneId": "middle" },
-                        { "pitch": 0, "yaw": -130, "type": "scene", "text": "前往：無障礙廁所", "sceneId": "accessible_toilet" }
-                    ]
-                },
-                "middle": {
-                    "title": "走廊2", "type": "equirectangular", "panorama": "中段.jpg",
-                    "hotSpots": [
-                        { "pitch": 0, "yaw": 155, "type": "scene", "text": "前往：走廊", "sceneId": "corridor" },
-                        { "pitch": 0, "yaw": -20, "type": "scene", "text": "前往：上課區", "sceneId": "Attend class" },
-                        { "pitch": 0, "yaw": 100, "type": "scene", "text": "前往：快樂家", "sceneId": "happy" },
-                        { "pitch": 0, "yaw": -130, "type": "scene", "text": "前往：性別友善廁所與無障礙廁所", "sceneId": "toilet2" },
-                        { "pitch": 0, "yaw": -85, "type": "scene", "text": "前往：性別友善廁所", "sceneId": "toilet1" }
-                    ]
-                },
-                "safe_home": {
-                    "title": "平安家", "type": "equirectangular", "panorama": "平安家.jpg",
-                    "hotSpots": [{ "pitch": 0, "yaw": 180, "type": "scene", "text": "返回：走廊", "sceneId": "corridor" }]
-                },
-                "happy": {
-                    "title": "快樂家", "type": "equirectangular", "panorama": "快樂家.jpg",
-                    "hotSpots": [{ "pitch": 0, "yaw": 170, "type": "scene", "text": "返回：走廊2", "sceneId": "middle" }]
-                },
-                "accessible_toilet": {
-                    "title": "無障礙廁所", "type": "equirectangular", "panorama": "廁所4.jpg",
-                    "hotSpots": [{ "pitch": 0, "yaw": 90, "type": "scene", "text": "返回：走廊", "sceneId": "corridor" }]
-                },
-                "toilet2": {
-                    "title": "性別友善廁所與無障礙廁所", "type": "equirectangular", "panorama": "廁所2.jpg",
-                    "hotSpots": [{ "pitch": 0, "yaw": 70, "type": "scene", "text": "返回：走廊2", "sceneId": "middle" }]
-                },
-                "toilet1": {
-                    "title": "性別友善廁所", "type": "equirectangular", "panorama": "廁所1.jpg",
-                    "hotSpots": [{ "pitch": 0, "yaw": 80, "type": "scene", "text": "返回：走廊2", "sceneId": "middle" }]
-                },
-                "Perfect": {
-                    "title": "圓滿家", "type": "equirectangular", "panorama": "圓滿家.jpg",
-                    "hotSpots": [{ "pitch": 0, "yaw": -110, "type": "scene", "text": "返回：上課區", "sceneId": "Attend class" }]
-                },
-                "Attend class": {
-                    "title": "上課區", "type": "equirectangular", "panorama": "上課區.jpg",
-                    "hotSpots": [
-                        { "pitch": 0, "yaw": -135, "type": "scene", "text": "前往：性別友善廁所與無障礙廁所", "sceneId": "toilet2" },
-                        { "pitch": 0, "yaw": -160, "type": "scene", "text": "返回：走廊2", "sceneId": "middle" },
-                        { "pitch": 0, "yaw": 119, "type": "scene", "text": "前往：圓滿家", "sceneId": "Perfect" },
-                        { "pitch": 0, "yaw": -115, "type": "scene", "text": "前往：性別友善廁所", "sceneId": "toilet1" },
-                        // 保留點擊開啟廚房平面圖的互動點
-                        { "pitch": -5, "yaw": -45, "type": "info", "text": "檢視：廚房區平面圖", "clickHandlerFunc": openKitchenFlatView }
-                    ]
-                },
-                "activity": {
-                    "title": "活動區", "type": "equirectangular", "panorama": "活動區.jpg",
-                    "hotSpots": [{ "pitch": 0, "yaw": -170, "type": "scene", "text": "返回：置物櫃", "sceneId": "locker" }]
-                }
-            }
-        });
-
-        // 點擊廚房區熱點時，打開平面圖並顯示廚房的左下角文字介紹
-        function openKitchenFlatView(event) {
-            const container = document.getElementById('flat-view-container');
-            container.style.display = 'flex';
+    // 點擊廚房區熱點時，打開平面圖並動態填入詳細介紹內容
+    function openKitchenFlatView(event) {
+        const container = document.getElementById('flat-view-container');
+        container.style.display = 'flex';
+        
+        const info = sceneInfo["kitchen"];
+        if(info) {
+            document.getElementById('flat-title').innerText = info.title;
+            document.getElementById('flat-desc').innerText = info.desc;
             
-            const info = sceneInfo["kitchen"];
-            if(info) {
-                document.getElementById('modal-title').innerText = info.title;
-                document.getElementById('modal-desc').innerText = info.desc;
-                document.getElementById('info-modal').style.display = 'block';
-                document.getElementById('info-toggle-btn').style.display = 'none';
+            const featuresList = document.getElementById('flat-features-list');
+            featuresList.innerHTML = '';
+            if(info.features) {
+                info.features.forEach(feature => {
+                    const li = document.createElement('li');
+                    li.innerHTML = feature;
+                    featuresList.appendChild(li);
+                });
             }
+            
+            // 關閉全景的浮動小視窗，避免畫面過於擁擠
+            document.getElementById('info-modal').style.display = 'none';
+            document.getElementById('info-toggle-btn').style.display = 'none';
         }
+    }
 
-        // 關閉平面圖，回到上課區並恢復上課區介紹
-        function closeFlatView() {
-            const container = document.getElementById('flat-view-container');
-            container.style.display = 'none';
-            showInfo("Attend class", true);
+    // 關閉平面圖，回到上課區並恢復上課區介紹
+    function closeFlatView() {
+        const container = document.getElementById('flat-view-container');
+        container.style.display = 'none';
+        showInfo("Attend class", true);
+    }
+
+    function toggleOverlay(event) {
+        if (event) event.stopPropagation();
+        const overlay = document.getElementById('title-overlay');
+        overlay.classList.toggle('collapsed');
+    }
+
+    function checkToggle(event) {
+        const overlay = document.getElementById('title-overlay');
+        if (overlay.classList.contains('collapsed')) {
+            overlay.classList.remove('collapsed');
         }
+    }
 
-        function toggleOverlay(event) {
-            if (event) event.stopPropagation();
-            const overlay = document.getElementById('title-overlay');
-            overlay.classList.toggle('collapsed');
+    let manualClosedInfo = false;
+    let currentSceneId = "counter";
+
+    function toggleInfoModal() {
+        const modal = document.getElementById('info-modal');
+        const toggleBtn = document.getElementById('info-toggle-btn');
+
+        if (modal.style.display === 'block') {
+            modal.style.display = 'none';
+            toggleBtn.style.display = 'block';
+            manualClosedInfo = true;
+        } else {
+            showInfo(currentSceneId, true);
         }
+    }
 
-        function checkToggle(event) {
-            const overlay = document.getElementById('title-overlay');
-            if (overlay.classList.contains('collapsed')) {
-                overlay.classList.remove('collapsed');
-            }
-        }
+    viewer.on('scenechange', function(sceneId) {
+        currentSceneId = sceneId;
+        manualClosedInfo = false;
+        showInfo(sceneId, false);
+    });
 
-        let manualClosedInfo = false;
-        let currentSceneId = "counter";
+    function showInfo(sceneId, forced) {
+        const info = sceneInfo[sceneId];
+        if (info) {
+            document.getElementById('modal-title').innerText = info.title;
+            document.getElementById('modal-desc').innerText = info.desc;
 
-        function toggleInfoModal() {
             const modal = document.getElementById('info-modal');
             const toggleBtn = document.getElementById('info-toggle-btn');
 
-            if (modal.style.display === 'block') {
-                modal.style.display = 'none';
-                toggleBtn.style.display = 'block';
-                manualClosedInfo = true;
-            } else {
-                showInfo(currentSceneId, true);
+            if (forced || !manualClosedInfo) {
+                modal.style.display = 'block';
+                toggleBtn.style.display = 'none';
+                manualClosedInfo = false;
             }
         }
+    }
 
-        viewer.on('scenechange', function(sceneId) {
-            currentSceneId = sceneId;
-            manualClosedInfo = false;
-            showInfo(sceneId, false);
-        });
-
-        function showInfo(sceneId, forced) {
-            const info = sceneInfo[sceneId];
-            if (info) {
-                document.getElementById('modal-title').innerText = info.title;
-                document.getElementById('modal-desc').innerText = info.desc;
-
-                const modal = document.getElementById('info-modal');
-                const toggleBtn = document.getElementById('info-toggle-btn');
-
-                if (forced || !manualClosedInfo) {
-                    modal.style.display = 'block';
-                    toggleBtn.style.display = 'none';
-                    manualClosedInfo = false;
-                }
-            }
-        }
-
-        window.onload = function() {
-            showInfo("counter", true);
-        };
-    </script>
-
-</body>
-</html>
+    window.onload = function() {
+        showInfo("counter", true);
+    };
+</script>
